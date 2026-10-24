@@ -1,0 +1,23 @@
+.dn-txt-modal { width: min(680px, 100%); }
+.dn-txt-modal .modal-content { overflow-y: auto; overscroll-behavior: contain; }
+.dn-txt-hint { color: var(--text-muted); font-size: var(--font-ui-small); line-height: 1.5; }
+.dn-txt-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-block: 20px; }
+.dn-txt-date-field, .dn-txt-preview-label { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.dn-txt-date-field input { width: 100%; min-width: 0; min-height: 44px; font-size: 16px; box-sizing: border-box; }
+.dn-txt-details { margin-block: 14px; border: 1px solid var(--background-modifier-border); border-radius: 10px; padding: 12px; }
+.dn-txt-details summary { cursor: pointer; padding-block: 8px; font-weight: 600; }
+.dn-txt-details .setting-item, .dn-txt-settings .setting-item { gap: 12px; }
+.dn-txt-details input[type="text"] { max-width: 100%; }
+.dn-txt-status { white-space: pre-wrap; overflow-wrap: anywhere; margin-block: 12px; color: var(--text-normal); line-height: 1.5; }
+.dn-txt-primary { width: 100%; min-height: 48px; margin-block: 8px; }
+.dn-txt-preview { width: 100%; min-height: 220px; height: 38vh; resize: vertical; box-sizing: border-box; font: 14px/1.6 var(--font-monospace); user-select: text; -webkit-user-select: text; }
+.dn-txt-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dn-txt-actions button { min-height: 44px; white-space: normal; height: auto; padding: 10px; }
+@media (max-width: 600px) {
+  .dn-txt-modal .setting-item, .dn-txt-settings .setting-item { flex-direction: column; align-items: stretch; }
+  .dn-txt-modal .setting-item-control, .dn-txt-settings .setting-item-control { justify-content: flex-start; width: 100%; }
+  .dn-txt-modal .setting-item-control input[type="text"], .dn-txt-modal select,
+  .dn-txt-settings input[type="text"], .dn-txt-settings select { width: 100%; min-height: 44px; font-size: 16px; }
+  .dn-txt-dates { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .dn-txt-preview { height: 32vh; min-height: 180px; }
+}

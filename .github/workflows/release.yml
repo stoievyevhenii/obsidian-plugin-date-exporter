@@ -1,0 +1,51 @@
+name: Prepare draft release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: draft-plugin-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+      - run: npm audit --audit-level=moderate
+      - run: node scripts/package.mjs --out release
+      - name: Create draft with the exact manifest version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version=$(node -p "JSON.parse(require('fs').readFileSync('manifest.json', 'utf8')).version")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh release create "$version" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --draft \
+            --title "Daily Notes TXT Export $version" \
+            --notes-file docs/release-notes.md \
+            release/daily-notes-txt-export/main.js \
+            release/daily-notes-txt-export/manifest.json \
+            release/daily-notes-txt-export/styles.css \
+            release/daily-notes-txt-export/LICENSE \
+            release/daily-notes-txt-export/THIRD_PARTY_NOTICES.md \
+            release/daily-notes-txt-export-"$version".zip \
+            release/daily-notes-txt-export-"$version"-source.zip \
+            release/SHA256SUMS.txt

@@ -1,0 +1,10 @@
+{
+  "id": "daily-notes-txt-export",
+  "name": "Daily Notes TXT Export",
+  "version": "1.1.1",
+  "minAppVersion": "1.5.7",
+  "description": "Export daily Markdown lists grouped by date, Company and Ship to one TXT report; copy or share on mobile.",
+  "author": "Yevhenii Stoiev",
+  "authorUrl": "https://github.com/stoievyevhenii",
+  "isDesktopOnly": false
+}

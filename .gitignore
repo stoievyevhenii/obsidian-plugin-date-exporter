@@ -1,0 +1,13 @@
+node_modules/
+coverage/
+build-meta.json
+*.log
+main.js
+release/
+data.json
+.env
+.env.*
+.obsidian/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo

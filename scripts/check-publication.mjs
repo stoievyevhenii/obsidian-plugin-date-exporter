@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { parse } from 'yaml';
+
+const json = async name => JSON.parse(await readFile(name, 'utf8'));
+const manifest = await json('manifest.json');
+const pkg = await json('package.json');
+const lock = await json('package-lock.json');
+const versions = await json('versions.json');
+assert.match(manifest.id, /^[a-z]+(?:-[a-z]+)*$/);
+assert.ok(!manifest.id.includes('obsidian') && !manifest.id.endsWith('plugin'));
+assert.match(manifest.name, /^[A-Za-z0-9 ()+-]+$/);
+assert.doesNotMatch(manifest.name, /\b(?:obsidian|plugin)\b/i);
+assert.ok(manifest.description.length <= 250 && manifest.description.endsWith('.'));
+assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
+assert.match(manifest.minAppVersion, /^\d+\.\d+\.\d+$/);
+assert.equal(manifest.isDesktopOnly, false);
+assert.equal(manifest.author, 'Yevhenii Stoiev');
+assert.equal(pkg.version, manifest.version);
+assert.equal(lock.version, manifest.version);
+assert.equal(lock.packages[''].version, manifest.version);
+assert.equal(versions[manifest.version], manifest.minAppVersion);
+assert.deepEqual(pkg.dependencies, lock.packages[''].dependencies);
+assert.deepEqual(pkg.devDependencies, lock.packages[''].devDependencies);
+for (const version of [...Object.values(pkg.dependencies), ...Object.values(pkg.devDependencies)]) assert.match(version, /^\d+\.\d+\.\d+$/);
+assert.equal(pkg.repository.url, 'git+https://github.com/stoievyevhenii/obsidian-plugin-date-exporter.git');
+for (const name of ['README.md', 'README.ru.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'SECURITY.md', 'PUBLICATION.md', '.github/workflows/ci.yml', '.github/workflows/release.yml']) assert.ok((await readFile(name, 'utf8')).trim());
+const ignores = await readFile('.gitignore', 'utf8');
+for (const name of ['main.js', 'data.json', '.env', 'node_modules/', 'release/']) assert.ok(ignores.split(/\r?\n/).includes(name));
+const bundle = await readFile('main.js', 'utf8');
+for (const notice of ['Yevhenii Stoiev', 'Felix Böhm', 'Christopher Jeffrey']) assert.ok(bundle.includes(notice), `Missing bundled license attribution: ${notice}`);
+for (const path of ['.github/workflows/ci.yml', '.github/workflows/release.yml']) {
+  const workflow = await readFile(path, 'utf8');
+  const uses = [...workflow.matchAll(/uses:\s*(\S+)/g)].map(match => match[1]);
+  assert.ok(uses.length > 0 && uses.every(action => /@[a-f0-9]{40}$/.test(action)));
+  assert.doesNotMatch(workflow, /pull_request_target/);
+}
+const release = await readFile('.github/workflows/release.yml', 'utf8');
+assert.match(release, /workflow_dispatch/);
+assert.match(release, /--draft/);
+const ciConfig = parse(await readFile('.github/workflows/ci.yml', 'utf8'));
+const releaseConfig = parse(release);
+assert.equal(ciConfig.permissions.contents, 'read');
+assert.equal(releaseConfig.permissions.contents, 'read');
+assert.equal(releaseConfig.jobs.release.permissions.contents, 'write');
+assert.deepEqual(Object.keys(releaseConfig.on), ['workflow_dispatch']);
+assert.ok(Object.keys(ciConfig.on).includes('pull_request') && !Object.keys(ciConfig.on).includes('pull_request_target'));
+console.log('Publication checks passed: manifest, versions, licenses, locked dependencies, source exclusions and pinned draft-release workflow.');
