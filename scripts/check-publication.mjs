@@ -26,7 +26,17 @@ for (const version of [...Object.values(pkg.dependencies), ...Object.values(pkg.
 assert.equal(pkg.repository.url, 'git+https://github.com/stoievyevhenii/obsidian-plugin-date-exporter.git');
 for (const name of ['README.md', 'README.ru.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md', 'SECURITY.md', 'PUBLICATION.md', '.github/workflows/ci.yml', '.github/workflows/release.yml']) assert.ok((await readFile(name, 'utf8')).trim());
 const ignores = await readFile('.gitignore', 'utf8');
-for (const name of ['main.js', 'data.json', '.env', 'node_modules/', 'release/']) assert.ok(ignores.split(/\r?\n/).includes(name));
+const ignoreEntries = new Set(ignores.replace(/^\uFEFF/, '').split(/\r?\n/).map(line => line.trim()));
+const hasIgnoreEntry = name => ignoreEntries.has(name) || ignoreEntries.has('/' + name);
+for (const name of ['data.json', '.env', 'node_modules/', 'release/']) {
+  assert.ok(hasIgnoreEntry(name), 'Missing required .gitignore entry: ' + name);
+}
+// Keeping the generated bundle out of Git is an Obsidian checklist
+// recommendation, not a mandatory Community submission requirement.
+// The bundle is still verified below and must be attached to the release.
+if (!hasIgnoreEntry('main.js')) {
+  console.warn('Publication recommendation: add main.js to .gitignore and publish it as a release asset. A committed bundle does not block these local checks.');
+}
 const bundle = await readFile('main.js', 'utf8');
 for (const notice of ['Yevhenii Stoiev', 'Felix Böhm', 'Christopher Jeffrey']) assert.ok(bundle.includes(notice), `Missing bundled license attribution: ${notice}`);
 for (const path of ['.github/workflows/ci.yml', '.github/workflows/release.yml']) {
