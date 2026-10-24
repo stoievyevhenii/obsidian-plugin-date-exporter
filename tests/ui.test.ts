@@ -21,6 +21,13 @@ beforeEach(() => {
 afterEach(() => { plugin.onunload(); document.body.replaceChildren(); });
 
 describe('mobile / desktop export dialog flow', () => {
+  it('exports markerless body text through the full dialog and save flow', async () => {
+    vi.mocked(app.vault.cachedRead).mockResolvedValue('---\nCompany: ShipCompany\nShip: Ship 1\n---\nПроверка вчера');
+    plugin.track(new ExportModal(app, plugin));
+    document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('2026-10-01\n[ShipCompany]\n  Ship 1:\n    1) Проверка вчера\n');
+  });
   it('registers the command and opens the dialog with the requested default range', async () => {
     await plugin.onload();
     const addCommand = vi.mocked(plugin.addCommand);

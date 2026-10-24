@@ -20,11 +20,21 @@ export const DEFAULT_SETTINGS: ExportSettings = {
 export function validateSettings(settings: ExportSettings): ExportSettings {
   // Reject traversal and absolute paths before Obsidian's cross-platform cleanup,
   // then validate again in case normalization changed a path segment.
-  const folder = (value: string): string => cleanFolder(normalizePath(cleanFolder(value)));
+  const folder = (value: string, label: string): string => {
+    try {
+      const relative = cleanFolder(value);
+      // Obsidian represents normalizePath('') as '/'. Keep the plugin's empty
+      // root sentinel before normalizing actual relative subfolder paths.
+      return relative === '' ? '' : cleanFolder(normalizePath(relative));
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : 'Недопустимый путь.';
+      throw new Error(label + ': ' + reason);
+    }
+  };
   const normalized = {
     ...settings,
-    dailyFolder: folder(settings.dailyFolder),
-    outputFolder: folder(settings.outputFolder),
+    dailyFolder: folder(settings.dailyFolder, 'Папка Daily Notes'),
+    outputFolder: folder(settings.outputFolder, 'Папка отчётов'),
     nameFormat: settings.nameFormat.trim(),
   };
   compileNameFormat(normalized.nameFormat);

@@ -9,7 +9,7 @@ Export daily Markdown lists for an inclusive date range to a single TXT report, 
 - Pick any start/end dates; initial defaults are October 1–23, 2026.
 - Configure the daily-note folder and filename format (`YYYY-MM-DD` by default).
 - Find same-date notes in different ship subfolders; recursive search is enabled by default.
-- Export ordinary Markdown list items and checkboxes, or checkboxes only; optionally exclude completed tasks.
+- Export plain body text, ordinary Markdown list items and checkboxes, or checkboxes only; optionally exclude completed tasks. Each nonempty standalone body line becomes an item.
 - Read the page properties `Company` and `Ship`, group their items, and restart numbering for each ship on each day.
 - Skip empty items, groups and dates. Keep source notes unchanged and give repeated exports a new filename.
 - Preview and automatically save one UTF-8 TXT inside the vault; explicitly copy or share it afterward.
@@ -70,7 +70,7 @@ The `examples/` folder contains sample notes and exact expected TXT files. The g
 
 Supported filename tokens are the literal numeric tokens `YYYY`, `MM`, `DD`; all three are required. Examples: `YYYY-MM-DD`, `DD.MM.YYYY.md`, `YYYY/MM/YYYY-MM-DD`, `[Journal-]YYYY-MM-DD`. The `.md` extension is optional in settings. This is a deliberately limited token set, not the full Moment format language. With recursive search enabled, the format matches the end of the relative path inside the configured daily-note folder.
 
-Bullet/ordered lists, standard and custom single-character checkbox statuses, nested items and multiline items are supported. Nested items become separate entries. Inline Markdown is reduced to text. YAML, prose, headings, code blocks and comments are excluded; lists in blockquotes/callouts are included. Dataview/Tasks query results and embedded notes are not evaluated.
+Bullet/ordered lists, standard and custom single-character checkbox statuses, nested items and multiline items are supported. Nested items become separate entries. Inline Markdown is reduced to text. YAML, headings, code blocks and comments are excluded; lists in blockquotes/callouts are included. Dataview/Tasks query results and embedded notes are not evaluated.
 
 Dates are validated as real civil dates. Absolute paths, traversal segments, hidden folders and invalid cross-platform path characters are rejected. All selected notes must be read and parsed successfully before a report can be saved; empty exports create no TXT.
 

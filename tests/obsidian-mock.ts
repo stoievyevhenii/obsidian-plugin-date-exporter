@@ -3,8 +3,7 @@ import { parse } from 'yaml';
 
 // Emulate the host's public YAML parser with a real YAML implementation.
 export const parseYaml = (text: string): unknown => parse(text);
-export const normalizePath = (text: string): string => text.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\/+|\/+$/g, '').replace(/\u00a0/g, ' ').normalize('NFC');
-
+export const normalizePath = (text: string): string => (text.replace(/\\/g, '/').replace(/\/{2,}/g, '/').replace(/^\/+|\/+$/g, '').replace(/\u00a0/g, ' ').normalize('NFC')) || '/';
 export class TFolder { constructor(public path: string) {} }
 export class TFile {
   constructor(public path: string) {}

@@ -49,9 +49,9 @@ describe('Markdown conversion', () => {
     expect(extractItems('- parent\n  continued\n  - [ ] child\n    second line\n  - sibling\n\n- next\n', all))
       .toEqual(['parent continued', 'child second line', 'sibling', 'next']);
   });
-  it('ignores YAML, prose, comments, fenced and indented code', () => {
+  it('includes body text while ignoring YAML, comments, fenced and indented code', () => {
     const md = '---\ntags:\n - not a task\n---\n# Title\nProse\n<!--\n- hidden\n-->\n%%\n- hidden\n%%\n```md\n- code\n```\n\n    - indented code\n\n- visible\n';
-    expect(extractItems(md, all)).toEqual(['visible']);
+    expect(extractItems(md, all)).toEqual(['Prose', 'visible']);
   });
   it('supports CRLF, BOM, loose lists, callouts, inline styles, links, entities and wikilinks', () => {
     const md = '\ufeff- **Bold** *italic* `code` [link](https://example.com) &amp; [[Note|alias]]\r\n\r\n- Next\r\n\r\n> [!todo]\r\n> - [ ] Quoted task\r\n';
@@ -83,7 +83,7 @@ describe('Markdown conversion', () => {
     const report = buildReport([
       { date: '2027-01-01', markdown: '- Вторая дата', company: 'Company', ship: 'Ship' },
       { date: '2026-12-31', markdown: '- Первый\n- Второй', company: 'Company', ship: 'Ship' },
-      { date: '2026-12-30', markdown: 'Prose\n- [ ]' },
+      { date: '2026-12-30', markdown: '# Empty\n- [ ]' },
       { date: '2026-12-31', markdown: '- Третий', company: 'Company', ship: 'Ship' },
     ], all);
     expect(report).toEqual({ text: '2026-12-31\n[Company]\n  Ship:\n    1) Первый\n    2) Второй\n    3) Третий\n\n2027-01-01\n[Company]\n  Ship:\n    1) Вторая дата\n', days: 2, items: 4 });

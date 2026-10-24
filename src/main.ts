@@ -23,7 +23,8 @@ function settingsFields(container: HTMLElement, draft: ExportSettings): void {
     .setDesc('Будет создана при сохранении. Пустое поле — корень vault.')
     .addText(text => text.setValue(draft.outputFolder).onChange(value => { draft.outputFolder = value; }));
   new Setting(container).setName('Какие пункты включать')
-    .addDropdown(dropdown => dropdown.addOption('all', 'Все пункты списков').addOption('checkboxes', 'Только чекбоксы')
+    .setDesc('В общем режиме каждая непустая строка текста без маркера тоже становится пунктом отчёта.')
+    .addDropdown(dropdown => dropdown.addOption('all', 'Текст, списки и чекбоксы').addOption('checkboxes', 'Только чекбоксы')
       .setValue(draft.listMode).onChange(value => { draft.listMode = value === 'checkboxes' ? 'checkboxes' : 'all'; }));
   new Setting(container).setName('Включать выполненные задачи')
     .setDesc('Если выключено, завершённые чекбоксы исключаются. Остальные статусы включаются.')

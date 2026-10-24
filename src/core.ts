@@ -99,11 +99,11 @@ export function compileNameFormat(input: string): (relativePath: string) => stri
   };
 }
 
-function inlineText(tokens: Token[]): string {
+function inlineText(tokens: Token[], lineBreak = ' '): string {
   return tokens.map(token => {
     if (token.type === 'html') return '';
-    if (token.type === 'br') return ' ';
-    if ('tokens' in token && Array.isArray(token.tokens)) return inlineText(token.tokens);
+    if (token.type === 'br') return lineBreak;
+    if ('tokens' in token && Array.isArray(token.tokens)) return inlineText(token.tokens, lineBreak);
     if ('text' in token && typeof token.text === 'string') return token.text;
     return '';
   }).join('');
@@ -147,6 +147,7 @@ function isTextBlock(token: Token): token is Tokens.Text | Tokens.Paragraph | To
 
 function isList(token: Token): token is Tokens.List { return token.type === 'list'; }
 function isBlockquote(token: Token): token is Tokens.Blockquote { return token.type === 'blockquote'; }
+function isParagraph(token: Token): token is Tokens.Paragraph { return token.type === 'paragraph'; }
 
 function ownText(item: Tokens.ListItem): string {
   return plainText(item.tokens.flatMap(token => {
@@ -161,7 +162,7 @@ export function extractItems(markdown: string, options: ExtractOptions): string[
   const source = markdown.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
     .replace(/^---[ \t]*\n[\s\S]*?\n(?:---|\.\.\.)[ \t]*(?:\n|$)/, '');
   const result: string[] = [];
-  function walk(tokens: Token[]): void {
+  function walk(tokens: Token[], includePlainText = true): void {
     for (const token of tokens) {
       if (isList(token)) {
         for (const item of token.items) {
@@ -174,9 +175,19 @@ export function extractItems(markdown: string, options: ExtractOptions): string[
           if (text && (options.listMode === 'all' || checkbox) && (options.includeCompleted || !complete)) {
             result.push(text);
           }
-          walk(item.tokens);
+          walk(item.tokens, false);
         }
-      } else if (isBlockquote(token)) walk(token.tokens);
+      } else if (isBlockquote(token)) {
+        // Keep existing list support in quotes without exporting callout titles.
+        walk(token.tokens, false);
+      } else if (includePlainText && options.listMode === 'all' && isParagraph(token)) {
+        // List item continuations are handled by ownText(), so only standalone
+        // body paragraphs reach this branch. Preserve one item per source line.
+        for (const line of inlineText(token.tokens, '\n').split(/\r?\n/)) {
+          const text = plainText(line);
+          if (text) result.push(text);
+        }
+      }
     }
   }
   walk(markdownLexer.lexer(source));
