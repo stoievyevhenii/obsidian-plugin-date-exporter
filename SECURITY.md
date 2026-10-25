@@ -4,7 +4,7 @@
 
 The current release is maintained by Yevhenii Stoiev. Report a vulnerability against the latest release; older releases may require an update.
 
-The plugin reads selected daily Markdown notes through Obsidian's Vault API, parses properties with the host's public YAML parser, and creates a plaintext TXT report inside the same vault. It does not modify source notes. Company and Ship are presentation labels; they are not tenant access controls.
+The plugin reads selected daily Markdown notes through Obsidian's Vault API, parses properties with the host's public YAML parser, and creates a plaintext Markdown report inside the same vault. It does not modify source notes. All YAML properties and the selected source lines are exported into the report; property names do not define access controls.
 
 Runtime has no telemetry, network requests, remote code loading, credentials, account requirement, self-update mechanism, or Node/Electron dependency. Copy and Share are explicit user actions. Once copied or shared, content is subject to the operating system and the selected receiving application's handling. Saved reports follow the vault's synchronization settings.
 

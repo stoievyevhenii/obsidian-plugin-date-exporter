@@ -8,7 +8,7 @@ export default defineConfig([
     files: ['src/**/*.ts'],
     languageOptions: { parserOptions: { projectService: true } },
     rules: {
-      'obsidianmd/ui/sentence-case': ['warn', { brands: ['Daily Notes', 'Daily Notes TXT Export', 'Company', 'Ship', 'Android', 'WebView'], acronyms: ['TXT'] }],
+      'obsidianmd/ui/sentence-case': ['warn', { brands: ['Daily Notes', 'Daily Notes TXT Export', 'Company', 'Ship', 'Android', 'WebView', 'Markdown'], acronyms: ['TXT', 'MD'] }],
       // The optional declarative settings API requires 1.13; retain display()
       // while supporting 1.5. This is an advisory compatibility exception.
       'obsidianmd/settings-tab/prefer-setting-definitions': 'off',

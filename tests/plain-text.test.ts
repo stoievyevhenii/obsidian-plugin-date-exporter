@@ -26,8 +26,8 @@ describe('plain text alongside Markdown lists', () => {
   it('retains quoted lists without adding callout titles or quoted prose', () => {
     expect(extractItems('> [!todo] Title\n> Quoted prose\n> - Task\n\nBody text', all)).toEqual(['Task', 'Body text']);
   });
-  it('groups markerless text by Company and Ship with the requested date', () => {
+  it('exports properties followed by markerless text without generated numbering', () => {
     const note = parseDailyNote('2026-10-23', '---\nCompany: ShipCompany\nShip: Ship 1\n---\nПроверка вчера');
-    expect(buildReport([note], all)).toEqual({ days: 1, items: 1, text: '2026-10-23\n[ShipCompany]\n  Ship 1:\n    1) Проверка вчера\n' });
+    expect(buildReport([note], all)).toEqual({ days: 1, items: 1, text: '**2026-10-23**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\nПроверка вчера\n' });
   });
 });

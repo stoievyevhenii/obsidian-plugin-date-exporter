@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Save Markdown (.md) reports with bold dates and a two-column property table with bold names.
+- Default to the full previous month on days 1–7 and the full current month from day 8, using the local date at each dialog opening. Keep manual date overrides.
+- Keep each source note in a separate block, retaining its source list numbers, checkbox markers, inline Markdown and indentation. Company/Ship grouping and generated numbering are removed.
+- Escape property text to keep table columns and labels intact.
+- Share Markdown with its matching extension and media type.
+- Retain date sorting, empty-page skipping, checkbox filters, vault-root support and unique report filenames.
+
 ## 1.1.1
 
 - Prepare the repository and draft-release workflow for Obsidian Community publication.

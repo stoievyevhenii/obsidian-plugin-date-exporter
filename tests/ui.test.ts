@@ -17,8 +17,10 @@ beforeEach(() => {
   } } as unknown as App;
   plugin = new DailyNotesTxtExport(app, {} as PluginManifest);
   Notice.messages = [];
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 25, 12));
 });
-afterEach(() => { plugin.onunload(); document.body.replaceChildren(); });
+afterEach(() => { vi.useRealTimers(); plugin.onunload(); document.body.replaceChildren(); });
 
 describe('mobile / desktop export dialog flow', () => {
   it('exports markerless body text through the full dialog and save flow', async () => {
@@ -26,7 +28,7 @@ describe('mobile / desktop export dialog flow', () => {
     plugin.track(new ExportModal(app, plugin));
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('2026-10-01\n[ShipCompany]\n  Ship 1:\n    1) Проверка вчера\n');
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('**2026-10-01**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\nПроверка вчера\n');
   });
   it('registers the command and opens the dialog with the requested default range', async () => {
     await plugin.onload();
@@ -34,13 +36,38 @@ describe('mobile / desktop export dialog flow', () => {
     addCommand.mock.calls[0]![0].callback!();
     const dates = document.querySelectorAll<HTMLInputElement>('input[type=date]');
     expect(dates[0]?.value).toBe('2026-10-01');
-    expect(dates[1]?.value).toBe('2026-10-23');
+    expect(dates[1]?.value).toBe('2026-10-31');
     plugin.onunload(); expect(document.querySelector('.modal')).toBeNull();
+  });
+  it.each([
+    [new Date(2026, 10, 7, 12), '2026-10-01', '2026-10-31'],
+    [new Date(2026, 10, 8, 12), '2026-11-01', '2026-11-30'],
+    [new Date(2027, 0, 1, 12), '2026-12-01', '2026-12-31'],
+  ])('prefills the monthly range on opening at %s', (today, start, end) => {
+    vi.setSystemTime(today as Date);
+    plugin.track(new ExportModal(app, plugin));
+    const dates = document.querySelectorAll<HTMLInputElement>('input[type=date]');
+    expect(dates[0]?.value).toBe(start);
+    expect(dates[1]?.value).toBe(end);
+  });
+  it('recomputes dates on reopening after the 7th and permits a manual range', async () => {
+    vi.setSystemTime(new Date(2026, 10, 7, 12));
+    const first = new ExportModal(app, plugin); plugin.track(first); first.close();
+    vi.setSystemTime(new Date(2026, 10, 8, 12));
+    plugin.track(new ExportModal(app, plugin));
+    const dates = document.querySelectorAll<HTMLInputElement>('input[type=date]');
+    expect(dates[0]?.value).toBe('2026-11-01');
+    expect(dates[1]?.value).toBe('2026-11-30');
+    dates[0]!.value = '2026-10-01'; dates[0]!.dispatchEvent(new Event('input'));
+    dates[1]!.value = '2026-10-02'; dates[1]!.dispatchEvent(new Event('input'));
+    document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
+    await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
+    expect(create.mock.calls[0]![0]).toBe('Reports/Daily-report_2026-10-01_2026-10-02.md');
   });
   it('blocks a reverse range and displays an inline error', () => {
     plugin.track(new ExportModal(app, plugin));
     const dates = document.querySelectorAll<HTMLInputElement>('input[type=date]');
-    dates[0]!.value = '2026-10-24'; dates[0]!.dispatchEvent(new Event('input'));
+    dates[0]!.value = '2026-11-01'; dates[0]!.dispatchEvent(new Event('input'));
     expect(document.querySelector<HTMLButtonElement>('button[type=submit]')?.disabled).toBe(true);
     expect(document.querySelector('[role=status]')?.textContent).toContain('не позже');
     expect(create).not.toHaveBeenCalled();
@@ -50,11 +77,11 @@ describe('mobile / desktop export dialog flow', () => {
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
     const area = document.querySelector<HTMLTextAreaElement>('textarea')!;
-    expect(area.value).toBe('2026-10-01\n[ShipCompany]\n  Ship 1:\n    1) Проверить экспорт\n');
+    expect(area.value).toBe('**2026-10-01**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\n- [ ] Проверить экспорт\n');
     expect(document.body.textContent).toContain('Копировать');
     expect(document.body.textContent).toContain('Поделиться');
     expect(document.body.textContent).toContain('Выделить всё');
-    expect(create.mock.calls[0]![0]).toBe('Reports/Daily-report_2026-10-01_2026-10-23.txt');
+    expect(create.mock.calls[0]![0]).toBe('Reports/Daily-report_2026-10-01_2026-10-31.md');
     const saveButton = document.querySelector<HTMLButtonElement>('.dn-txt-actions button')!;
     await vi.waitFor(() => expect(saveButton.disabled).toBe(true));
     saveButton.click(); expect(create).toHaveBeenCalledTimes(1);
@@ -83,7 +110,7 @@ describe('mobile / desktop export dialog flow', () => {
     plugin.track(new ExportModal(app, plugin));
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-    expect(document.querySelector('textarea')?.value).toContain('<img');
+    expect(document.querySelector('textarea')?.value).toContain('&#60;img');
     expect(document.querySelector('img, script')).toBeNull();
   });
 });

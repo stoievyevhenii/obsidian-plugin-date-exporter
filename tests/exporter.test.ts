@@ -36,11 +36,11 @@ describe('vault export', () => {
     });
     const settings = { ...DEFAULT_SETTINGS, dailyFolder: 'Daily', includeSubfolders: false };
     const report = await prepareReport(vault, settings, '2026-10-01', '2026-10-23');
-    expect(report.text).toBe('2026-10-01\n[Без компании]\n  Без судна:\n    1) First\n\n2026-10-23\n[Без компании]\n  Без судна:\n    1) Last\n');
+    expect(report.text).toBe('**2026-10-01**\n\n=====\n\n- First\n\n**2026-10-23**\n\n=====\n\n- Last\n');
     expect(api.cachedRead).toHaveBeenCalledTimes(3);
     expect(api.create).not.toHaveBeenCalled();
     const file = await saveReport(vault, settings, report);
-    expect(file.path).toBe('Reports/Daily-report_2026-10-01_2026-10-23.txt');
+    expect(file.path).toBe('Reports/Daily-report_2026-10-01_2026-10-23.md');
     expect([...saved.values()]).toEqual([report.text]);
   });
   it('supports a nested date filename format', async () => {
@@ -48,7 +48,7 @@ describe('vault export', () => {
     const report = await prepareReport(vault, { ...DEFAULT_SETTINGS, dailyFolder: 'Daily', nameFormat: 'YYYY/MM/DD.MM.YYYY' }, '2026-10-23', '2026-10-23');
     expect(report.items).toBe(1);
   });
-  it('groups same-date pages from nested ship folders by properties, not folder names', async () => {
+  it('keeps same-date pages separate in file-path order with their own properties', async () => {
     const { vault } = mockVault({
       'Daily/Other/2026-10-24.md': '---\nCompany: Company B\nShip: Ship 1\n---\n- B',
       'Daily/Folder 1/2026-10-24.md': '---\nCompany: ShipCompany\nShip: Ship 1\n---\n- First\n- Second',
@@ -58,7 +58,7 @@ describe('vault export', () => {
     });
     const report = await prepareReport(vault, { ...DEFAULT_SETTINGS, dailyFolder: 'Daily' }, '2026-10-24', '2026-10-24');
     expect(report.matchedFiles).toBe(4);
-    expect(report.text).toBe('2026-10-24\n[Company B]\n  Ship 1:\n    1) B\n[ShipCompany]\n  Ship 1:\n    1) First\n    2) Second\n  Ship 2:\n    1) Third\n');
+    expect(report.text).toBe('**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\n- First\n- Second\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 2 |\n\n=====\n\n- Third\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | Company B |\n| **Ship** | Ship 1 |\n\n=====\n\n- B\n');
   });
   it('reports invalid YAML with the source path and writes nothing', async () => {
     const { vault, api } = mockVault({ 'Daily/2026-10-24.md': '---\nCompany: [broken\n---\n- task' });
@@ -99,13 +99,13 @@ describe('vault export', () => {
     const first = await saveReport(vault, settings, report);
     const second = await saveReport(vault, settings, report);
     expect(first.path).not.toEqual(second.path);
-    expect(second.path).toContain(' (2).txt');
+    expect(second.path).toContain(' (2).md');
     expect(saved.size).toBe(2);
   });
-  it('does not create an empty TXT and reports file/folder conflicts', async () => {
+  it('does not create an empty MD and reports file/folder conflicts', async () => {
     const { vault, entries, api } = mockVault({ '2026-10-01.md': '' });
     const report = await prepareReport(vault, DEFAULT_SETTINGS, '2026-10-01', '2026-10-01');
-    await expect(saveReport(vault, DEFAULT_SETTINGS, report)).rejects.toThrow('TXT не создан');
+    await expect(saveReport(vault, DEFAULT_SETTINGS, report)).rejects.toThrow('MD не создан');
     expect(api.createFolder).not.toHaveBeenCalled();
     entries.set('Reports', new TFile('Reports'));
     await expect(saveReport(vault, DEFAULT_SETTINGS, { ...report, text: 'Text' })).rejects.toThrow('Вместо папки');
@@ -114,7 +114,7 @@ describe('vault export', () => {
     const { vault, api, entries } = mockVault({ '2026-10-01.md': '- Task' });
     const report = await prepareReport(vault, DEFAULT_SETTINGS, '2026-10-01', '2026-10-01');
     api.create.mockImplementationOnce(async (path: string) => { entries.set(path, new TFile(path)); throw new Error('Race'); });
-    expect((await saveReport(vault, DEFAULT_SETTINGS, report)).path).toContain(' (2).txt');
+    expect((await saveReport(vault, DEFAULT_SETTINGS, report)).path).toContain(' (2).md');
     api.create.mockRejectedValueOnce(new Error('Disk full'));
     await expect(saveReport(vault, DEFAULT_SETTINGS, report)).rejects.toThrow('Disk full');
   });

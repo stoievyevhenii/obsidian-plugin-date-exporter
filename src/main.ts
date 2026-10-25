@@ -1,5 +1,5 @@
 import { App, Modal, Notice, Plugin, PluginSettingTab, Setting, type TFile } from 'obsidian';
-import { DEFAULT_END, DEFAULT_START, validateRange } from './core';
+import { getDefaultDateRange, validateRange } from './core';
 import { prepareReport, saveReport, type PreparedReport } from './exporter';
 import { copyReport, selectReport, shareReport } from './sharing';
 import { DEFAULT_SETTINGS, loadSettings, validateSettings, type ExportSettings } from './settings';
@@ -14,7 +14,7 @@ function settingsFields(container: HTMLElement, draft: ExportSettings): void {
     .setDesc('Путь внутри vault, например Daily Notes. Пустое поле — корень. Настройка задаётся здесь независимо от основного плагина Daily Notes.')
     .addText(text => text.setPlaceholder('Daily Notes').setValue(draft.dailyFolder).onChange(value => { draft.dailyFolder = value; }));
   new Setting(container).setName('Включать вложенные папки')
-    .setDesc('Позволяет читать заметки с одинаковой датой в папках разных компаний и судов. Группировка берётся из properties Company и Ship.')
+    .setDesc('Позволяет читать заметки во вложенных папках. Каждый файл выводится отдельным блоком со своими properties.')
     .addToggle(toggle => toggle.setValue(draft.includeSubfolders).onChange(value => { draft.includeSubfolders = value; }));
   new Setting(container).setName('Формат имени')
     .setDesc('YYYY-MM-DD или DD.MM.YYYY. Расширение .md необязательно. Подпапки: YYYY/MM/YYYY-MM-DD. Текст: [Дневник-]YYYY-MM-DD.')
@@ -38,8 +38,8 @@ export default class DailyNotesTxtExport extends Plugin {
   override async onload(): Promise<void> {
     try { this.exportSettings = loadSettings(await this.loadData()); }
     catch { new Notice('Daily Notes TXT Export: настройки не удалось прочитать; используются значения по умолчанию.'); }
-    this.addCommand({ id: 'export-date-range', name: 'Экспорт заметок за период в TXT', callback: () => this.openExporter() });
-    this.addRibbonIcon('file-output', 'Экспорт Daily Notes в TXT', () => this.openExporter());
+    this.addCommand({ id: 'export-date-range', name: 'Экспорт заметок за период в MD', callback: () => this.openExporter() });
+    this.addRibbonIcon('file-output', 'Экспорт Daily Notes в MD', () => this.openExporter());
     this.addSettingTab(new ExportSettingTab(this.app, this));
   }
 
@@ -90,7 +90,7 @@ export class ExportModal extends Modal {
     this.modalEl.addClass('dn-txt-modal');
     this.setTitle('Экспорт Daily Notes');
     const draft = { ...this.plugin.exportSettings };
-    this.contentEl.createEl('p', { text: 'Один TXT: дата → Company → Ship. Пустые дни пропускаются, нумерация начинается заново для каждого судна.', cls: 'dn-txt-hint' });
+    this.contentEl.createEl('p', { text: 'Один Markdown-файл: жирная дата, таблица properties и строки заметки. С 1 по 7 число выбран предыдущий месяц, с 8-го — текущий. Даты можно изменить.', cls: 'dn-txt-hint' });
     const form = this.contentEl.createEl('form', { cls: 'dn-txt-form' });
     const dates = form.createDiv({ cls: 'dn-txt-dates' });
     const dateField = (label: string, value: string): HTMLInputElement => {
@@ -103,8 +103,9 @@ export class ExportModal extends Modal {
       input.max = '9999-12-31';
       return input;
     };
-    const start = dateField('С даты включительно', DEFAULT_START);
-    const end = dateField('По дату включительно', DEFAULT_END);
+    const range = getDefaultDateRange();
+    const start = dateField('С даты включительно', range.start);
+    const end = dateField('По дату включительно', range.end);
     const details = form.createEl('details', { cls: 'dn-txt-details' });
     details.createEl('summary', { text: 'Папки, формат имени и задачи' });
     settingsFields(details, draft);
@@ -135,7 +136,7 @@ export class ExportModal extends Modal {
       }, this.abort.signal).then(report => {
         if (this.abort.signal.aborted) return;
         if (!report.text) {
-          status.setText(`Непустые пункты не найдены. Подходящих заметок: ${report.matchedFiles}. Проверьте папку, формат имени и фильтры. TXT не создан.`);
+          status.setText(`Непустые пункты не найдены. Подходящих заметок: ${report.matchedFiles}. Проверьте папку, формат имени и фильтры. MD не создан.`);
           return;
         }
         this.plugin.track(new ResultModal(this.app, this.plugin, config, report));
@@ -164,15 +165,15 @@ export class ResultModal extends Modal {
   override onOpen(): void {
     this.modalEl.addClass('dn-txt-modal');
     this.setTitle('Отчёт готов');
-    this.contentEl.createEl('p', { text: `Дней: ${this.report.days} · пунктов: ${this.report.items} · прочитано заметок: ${this.report.matchedFiles}`, cls: 'dn-txt-hint' });
-    const label = this.contentEl.createEl('label', { cls: 'dn-txt-preview-label', text: 'Предпросмотр TXT' });
+    this.contentEl.createEl('p', { text: `Дней: ${this.report.days} · строк: ${this.report.items} · прочитано заметок: ${this.report.matchedFiles}`, cls: 'dn-txt-hint' });
+    const label = this.contentEl.createEl('label', { cls: 'dn-txt-preview-label', text: 'Предпросмотр Markdown' });
     const area = label.createEl('textarea', { cls: 'dn-txt-preview' });
     area.readOnly = true;
     area.spellcheck = false;
     area.value = this.report.text;
     area.setAttribute('aria-label', 'Текст отчёта для копирования');
     const status = this.contentEl.createDiv({ cls: 'dn-txt-status', attr: { role: 'status', 'aria-live': 'polite' } });
-    status.setText('Сохранение TXT…');
+    status.setText('Сохранение MD…');
     const actions = this.contentEl.createDiv({ cls: 'dn-txt-actions' });
     const save = actions.createEl('button', { text: 'Сохранение…', cls: 'mod-cta', type: 'button' });
     const persist = async (): Promise<void> => {
@@ -184,9 +185,9 @@ export class ResultModal extends Modal {
         status.setText(`Сохранено: ${this.file.path}`);
         save.setText('Сохранено в vault');
         // Also report completion if the user closed the modal during the write.
-        new Notice(`TXT сохранён: ${this.file.path}`, 7000);
+        new Notice(`MD сохранён: ${this.file.path}`, 7000);
       } catch (error) {
-        status.setText(`Не удалось сохранить TXT: ${errorMessage(error)} Текст можно скопировать или повторить сохранение.`);
+        status.setText(`Не удалось сохранить MD: ${errorMessage(error)} Текст можно скопировать или повторить сохранение.`);
         save.setText('Повторить сохранение');
       } finally { this.saving = false; save.disabled = this.file !== null; }
     };
@@ -199,11 +200,11 @@ export class ResultModal extends Modal {
     });
     const share = actions.createEl('button', { text: 'Поделиться', type: 'button' });
     share.addEventListener('click', () => {
-      const filename = this.file?.name ?? `Daily-report_${this.report.start}_${this.report.end}.txt`;
+      const filename = this.file?.name ?? `Daily-report_${this.report.start}_${this.report.end}.md`;
       void shareReport(this.report.text, filename, area).then(result => {
         if (result === 'unavailable') {
           selectReport(area);
-          new Notice('Системный обмен недоступен. Используйте «Копировать» или удерживайте выделенный текст → «Поделиться». Сохранённый TXT также можно отправить из файлового менеджера Android.', 10000);
+          new Notice('Системный обмен недоступен. Используйте «Копировать» или удерживайте выделенный текст → «Поделиться». Сохранённый MD также можно отправить из файлового менеджера Android.', 10000);
         }
       });
     });

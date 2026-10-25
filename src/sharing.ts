@@ -29,7 +29,7 @@ export async function shareReport(text: string, fileName: string, area: HTMLText
   // Invoke directly in the click handler; no vault I/O before navigator.share().
   let data: ShareData = { title: fileName, text };
   try {
-    const file = new File([text], fileName, { type: 'text/plain;charset=utf-8' });
+    const file = new File([text], fileName, { type: 'text/markdown;charset=utf-8' });
     if (nav.canShare?.({ files: [file] })) data = { title: fileName, files: [file] };
   } catch { /* If file sharing is unsupported, use text sharing. */ }
   try { await nav.share(data); return 'shared'; }

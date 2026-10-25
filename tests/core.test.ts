@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
-import { buildReport, cleanFolder, compileNameFormat, extractItems, propertyLabel, validateDate, validateRange } from '../src/core';
+import { buildReport, cleanFolder, compileNameFormat, extractItems, validateDate, validateRange } from '../src/core';
 import { parseDailyNote } from '../src/properties';
 import { DEFAULT_SETTINGS, loadSettings, validateSettings } from '../src/settings';
 
@@ -79,14 +79,14 @@ describe('Markdown conversion', () => {
   it('omits Obsidian comments inline, in a list item, and in a blockquote', () => {
     expect(extractItems('- visible %% hidden %% end\n- %% hidden %%\n> %%\n> - hidden task\n> %%\n> - shown\n', all)).toEqual(['visible end', 'shown']);
   });
-  it('sorts across month/year, resets numbering, skips empty days and merges duplicate dates', () => {
+  it('sorts dates, skips empty pages and preserves separate pages for duplicate dates', () => {
     const report = buildReport([
-      { date: '2027-01-01', markdown: '- Вторая дата', company: 'Company', ship: 'Ship' },
-      { date: '2026-12-31', markdown: '- Первый\n- Второй', company: 'Company', ship: 'Ship' },
+      { date: '2027-01-01', markdown: '- Last' },
+      { date: '2026-12-31', markdown: '- First\n- Second' },
       { date: '2026-12-30', markdown: '# Empty\n- [ ]' },
-      { date: '2026-12-31', markdown: '- Третий', company: 'Company', ship: 'Ship' },
+      { date: '2026-12-31', markdown: '- Third' },
     ], all);
-    expect(report).toEqual({ text: '2026-12-31\n[Company]\n  Ship:\n    1) Первый\n    2) Второй\n    3) Третий\n\n2027-01-01\n[Company]\n  Ship:\n    1) Вторая дата\n', days: 2, items: 4 });
+    expect(report).toEqual({ text: '**2026-12-31**\n\n=====\n\n- First\n- Second\n\n**2026-12-31**\n\n=====\n\n- Third\n\n**2027-01-01**\n\n=====\n\n- Last\n', days: 2, items: 4 });
   });
   it('returns no file content when there are no items', () => {
     expect(buildReport([{ date: '2026-10-01', markdown: '# Empty' }], all)).toEqual({ text: '', days: 0, items: 0 });
@@ -94,46 +94,31 @@ describe('Markdown conversion', () => {
   it('matches the shipped Russian example exactly', async () => {
     const notes = await Promise.all(['2026-10-01', '2026-10-02', '2026-10-03'].map(async date =>
       parseDailyNote(date, await readFile(`examples/Daily Notes/${date}.md`, 'utf8'))));
-    const expected = await readFile('examples/expected.txt', 'utf8');
+    const expected = await readFile('examples/expected.md', 'utf8');
     expect(buildReport(notes, all).text).toBe(expected);
   });
 });
 
-describe('Company / Ship grouping', () => {
-  it('matches the shipped same-date two-ship example exactly', async () => {
+describe('separate page properties', () => {
+  it('matches the shipped same-date two-page example exactly', async () => {
     const notes = await Promise.all(['Ship 1', 'Ship 2'].map(async ship =>
       parseDailyNote('2026-10-24', await readFile(`examples/Grouped/${ship}/2026-10-24.md`, 'utf8'))));
-    expect(buildReport(notes, all).text).toBe(await readFile('examples/grouped-expected.txt', 'utf8'));
+    expect(buildReport(notes, all).text).toBe(await readFile('examples/grouped-expected.md', 'utf8'));
   });
-  it('sorts companies and ships, merges each group and resets numbers per ship and date', () => {
-    const report = buildReport([
-      { date: '2026-10-24', company: 'B', ship: 'Ship 1', markdown: '- B task' },
-      { date: '2026-10-24', company: 'A', ship: 'Ship 2', markdown: '- Second ship' },
-      { date: '2026-10-24', company: 'A', ship: 'Ship 1', markdown: '- First\n- Second' },
-      { date: '2026-10-24', company: 'A', ship: 'Ship 1', markdown: '- Third' },
-      { date: '2026-10-25', company: 'A', ship: 'Ship 1', markdown: '- Next day' },
-    ], all);
-    expect(report).toEqual({ days: 2, items: 6, text:
-      '2026-10-24\n[A]\n  Ship 1:\n    1) First\n    2) Second\n    3) Third\n  Ship 2:\n    1) Second ship\n[B]\n  Ship 1:\n    1) B task\n\n2026-10-25\n[A]\n  Ship 1:\n    1) Next day\n' });
+  it('keeps properties attached to their own page without regrouping or merging', () => {
+    const notes = ['B', 'A', 'A'].map(company => parseDailyNote('2026-10-24', `---\nCompany: ${company}\nShip: Ship 1\n---\n- ${company}`));
+    expect(buildReport(notes, all)).toEqual({ days: 1, items: 3, text:
+      '**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | B |\n| **Ship** | Ship 1 |\n\n=====\n\n- B\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | A |\n| **Ship** | Ship 1 |\n\n=====\n\n- A\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | A |\n| **Ship** | Ship 1 |\n\n=====\n\n- A\n' });
   });
-  it('omits companies, ships and days with no included items', () => {
-    const report = buildReport([
-      { date: '2026-10-24', company: 'Empty', ship: 'Empty', markdown: '- [x] done' },
-      { date: '2026-10-25', company: 'A', ship: 'Empty', markdown: '- [ ]' },
-      { date: '2026-10-25', company: 'A', ship: 'Active', markdown: '- [ ] pending' },
-    ], { listMode: 'checkboxes', includeCompleted: false });
-    expect(report).toEqual({ days: 1, items: 1, text: '2026-10-25\n[A]\n  Active:\n    1) pending\n' });
-  });
-  it('keeps tasks when properties are missing', () => {
-    expect(buildReport([{ date: '2026-10-24', markdown: '- Task' }], all).text)
-      .toBe('2026-10-24\n[Без компании]\n  Без судна:\n    1) Task\n');
-  });
-  it('normalizes text, links and lists without duplicating tasks', () => {
-    expect(propertyLabel([' [[Company|ShipCompany]] ', 'ShipCompany', 'Partner'], 'fallback')).toBe('ShipCompany, Partner');
-    expect(propertyLabel('Ship\n  1', 'fallback')).toBe('Ship 1');
-    expect(propertyLabel([], 'fallback')).toBe('fallback');
-    expect(propertyLabel('  ', 'fallback')).toBe('fallback');
-    expect(() => propertyLabel({ wrong: 'type' }, 'fallback')).toThrow('Company');
+  it('omits property-only pages and pages with no included lines', () => {
+    const notes = [
+      parseDailyNote('2026-10-24', '---\nCompany: Empty\n---\n- [x] done'),
+      parseDailyNote('2026-10-25', '---\nCompany: Empty\n---\n- [ ]'),
+      parseDailyNote('2026-10-25', '---\nCompany: Active\n---\n- [ ] pending'),
+    ];
+    expect(buildReport(notes, { listMode: 'checkboxes', includeCompleted: false })).toEqual({
+      days: 1, items: 1, text: '**2026-10-25**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | Active |\n\n=====\n\n- [ ] pending\n',
+    });
   });
 });
 

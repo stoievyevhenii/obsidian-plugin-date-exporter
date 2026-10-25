@@ -28,27 +28,28 @@ describe('clipboard and sharing fallback', () => {
   it('selects the visible textarea for Android native actions', () => {
     selectReport(area); expect(document.activeElement).toBe(area); expect(area.selectionEnd).toBe(area.value.length);
   });
-  it('shares a TXT file when the platform supports it', async () => {
+  it('shares a Markdown file when the platform supports it', async () => {
     const share = vi.fn(async (_data: ShareData) => {}); navProperty('share', share); navProperty('canShare', () => true);
-    expect(await shareReport(area.value, 'report.txt', area)).toBe('shared');
+    expect(await shareReport(area.value, 'report.md', area)).toBe('shared');
     const data = share.mock.calls[0]![0];
-    expect(data.files?.[0]?.name).toBe('report.txt');
+    expect(data.files?.[0]?.name).toBe('report.md');
+    expect(data.files?.[0]?.type).toBe('text/markdown;charset=utf-8');
     expect(data.text).toBeUndefined();
   });
   it('shares text when file sharing is unsupported', async () => {
     const share = vi.fn(async (_data: ShareData) => {}); navProperty('share', share); navProperty('canShare', () => false);
-    expect(await shareReport(area.value, 'report.txt', area)).toBe('shared');
-    expect(share).toHaveBeenCalledWith({ title: 'report.txt', text: area.value });
+    expect(await shareReport(area.value, 'report.md', area)).toBe('shared');
+    expect(share).toHaveBeenCalledWith({ title: 'report.md', text: area.value });
   });
   it('quietly handles user cancellation', async () => {
     navProperty('share', async () => { throw new DOMException('Cancelled', 'AbortError'); });
-    expect(await shareReport(area.value, 'report.txt', area)).toBe('cancelled');
+    expect(await shareReport(area.value, 'report.md', area)).toBe('cancelled');
   });
   it('reports unavailable and denied sharing without dropping report text', async () => {
     navProperty('share', undefined);
-    expect(await shareReport(area.value, 'report.txt', area)).toBe('unavailable');
+    expect(await shareReport(area.value, 'report.md', area)).toBe('unavailable');
     navProperty('share', async () => { throw new Error('Denied'); });
-    expect(await shareReport(area.value, 'report.txt', area)).toBe('unavailable');
+    expect(await shareReport(area.value, 'report.md', area)).toBe('unavailable');
     expect(area.value).toContain('Тест');
   });
 });

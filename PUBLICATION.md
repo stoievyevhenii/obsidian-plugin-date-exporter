@@ -16,7 +16,7 @@ The repository must be public and the source accessible for review. The reposito
 
 Run `npm ci`, `npm run verify`, `npm audit --audit-level=moderate`, then `npm run package`. The files appear under `release/`.
 
-Before publishing, install the three runtime files in a disposable desktop vault and Android vault, run both supplied examples, confirm the result against the expected TXT, check clipboard/share fallback, repeated export naming and plugin disable/re-enable. Record actual device/app versions in `VALIDATION.md`; do not turn an unperformed device check into a claimed pass.
+Before publishing, install the three runtime files in a disposable desktop vault and Android vault, run both supplied examples, confirm the result against the expected Markdown, check clipboard/share fallback, repeated export naming and plugin disable/re-enable. Record actual device/app versions in `VALIDATION.md`; do not turn an unperformed device check into a claimed pass.
 
 ## 3. Prepare and publish the GitHub release
 

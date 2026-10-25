@@ -6,10 +6,27 @@ export interface ExtractOptions {
   listMode: ListMode;
   includeCompleted: boolean;
 }
-export interface DailyNote { date: string; markdown: string; company?: unknown; ship?: unknown }
+export interface NoteProperty { name: string; value: string }
+export interface DailyNote { date: string; markdown: string; properties?: NoteProperty[] }
 export interface Report { text: string; days: number; items: number }
-export const DEFAULT_START = '2026-10-01';
-export const DEFAULT_END = '2026-10-23';
+export interface DateRange { start: string; end: string }
+
+/** Evaluate the device's local calendar each time the export dialog opens. */
+export function getDefaultDateRange(today = new Date()): DateRange {
+  let year = today.getFullYear();
+  let month = today.getMonth() + 1;
+  if (today.getDate() <= 7) {
+    month--;
+    if (month === 0) { month = 12; year--; }
+  }
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const lastDay = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month - 1];
+  const prefix = String(year).padStart(4, '0') + '-' + String(month).padStart(2, '0');
+  const start = prefix + '-01';
+  const end = prefix + '-' + String(lastDay);
+  validateRange(start, end);
+  return { start, end };
+}
 
 /** Strict civil dates: no locale, timezone, or Date.parse rollover. */
 export function validateDate(value: string): string {
@@ -194,49 +211,92 @@ export function extractItems(markdown: string, options: ExtractOptions): string[
   return result;
 }
 
-/** Properties may be text, a link, or an Obsidian list of text values. */
-export function propertyLabel(value: unknown, fallback: string): string {
-  if (value === undefined || value === null) return fallback;
-  const values = Array.isArray(value) ? value : [value];
-  const labels = values.flatMap(entry => {
-    if (entry === null || entry === undefined) return [];
-    if (typeof entry !== 'string' && typeof entry !== 'number' && typeof entry !== 'boolean') {
-      throw new Error('Company и Ship должны быть текстом или списком простых значений.');
+/** Copy selected source lines, retaining Markdown markers and indentation. */
+export function extractSourceLines(markdown: string, options: ExtractOptions): string[] {
+  const source = markdown.replace(/^\uFEFF/, '').replace(/\r\n?/g, '\n')
+    .replace(/^---[ \t]*\n[\s\S]*?\n(?:---|\.\.\.)[ \t]*(?:\n|$)/, '');
+  // Remove inline comments/HTML without changing line offsets. Other inline
+  // syntax stays exactly as written, including links, numbers and checkboxes.
+  function visibleRaw(tokens: Token[]): string {
+    return tokens.map(token => {
+      if (token.type === 'html' || token.type === 'obsidianCommentInline') return token.raw.replace(/[^\n]/g, '');
+      if (!('tokens' in token) || !Array.isArray(token.tokens)) return token.raw;
+      let offset = 0;
+      let result = '';
+      for (const child of token.tokens) {
+        const index = token.raw.indexOf(child.raw, offset);
+        if (index < 0) return token.raw;
+        result += token.raw.slice(offset, index) + visibleRaw([child]);
+        offset = index + child.raw.length;
+      }
+      return result + token.raw.slice(offset);
+    }).join('');
+  }
+  const lines = visibleRaw(new markdownLexer.Lexer(markdownLexer.defaults).inlineTokens(source)).split('\n');
+  const selected = new Set<number>();
+  const newlines = (raw: string): number => raw.split('\n').length - 1;
+  function select(raw: string, line: number): void {
+    const count = raw.replace(/\n+$/, '').split('\n').length;
+    for (let index = 0; index < count; index++) {
+      if (plainText(lines[line + index] ?? '')) selected.add(line + index);
     }
-    let label = String(entry).normalize('NFC').replace(/[\u200b\ufeff]/g, '').replace(/\s+/g, ' ').trim();
-    const link = /^\[\[([^\]]+)\]\]$/.exec(label);
-    if (link) label = (link[1]!.split('|').pop() ?? '').trim();
-    return label ? [label] : [];
-  });
-  return [...new Set(labels)].join(', ') || fallback;
+  }
+  function walk(tokens: Token[], firstLine: number, body: boolean, own = false): void {
+    let line = firstLine;
+    for (const token of tokens) {
+      if (isList(token)) {
+        let itemLine = line;
+        for (const item of token.items) {
+          const custom = !item.task ? /^\[([^\]])\](?:\s+|$)/.exec(item.text.trimStart()) : null;
+          const checkbox = Boolean(item.task || custom);
+          const complete = item.checked === true || Boolean(custom && /^[xX]$/.test(custom[1]!));
+          const text = custom ? ownText(item).replace(/^\[[^\]]\](?:\s+|$)/, '').trim() : ownText(item);
+          const include = Boolean(text) && (options.listMode === 'all' || checkbox) && (options.includeCompleted || !complete);
+          walk(item.tokens, itemLine, false, include);
+          itemLine += newlines(item.raw);
+        }
+      } else if (isBlockquote(token)) {
+        walk(token.tokens, line, false);
+      } else if ((own && isTextBlock(token)) || (body && options.listMode === 'all' && isParagraph(token))) {
+        select(token.raw, line);
+      }
+      line += newlines(token.raw);
+    }
+  }
+  walk(markdownLexer.lexer(source), 0, true);
+  return [...selected].sort((a, b) => a - b).map(line => lines[line]!);
+}
+
+/** Keep property text literal inside a Markdown cell and its bold label. */
+function tableCell(value: string): string {
+  return value.replace(/\s+/g, ' ').trim()
+    .replace(/[&<>|\\`*_[\]~]/g, char => '&#' + char.charCodeAt(0) + ';');
 }
 
 export function buildReport(notes: DailyNote[], options: ExtractOptions): Report {
-  const grouped = new Map<string, Map<string, Map<string, string[]>>>();
-  for (const note of notes) {
-    validateDate(note.date);
-    const items = extractItems(note.markdown, options);
-    if (!items.length) continue;
-    const company = propertyLabel(note.company, 'Без компании');
-    const ship = propertyLabel(note.ship, 'Без судна');
-    let companies = grouped.get(note.date);
-    if (!companies) { companies = new Map(); grouped.set(note.date, companies); }
-    let ships = companies.get(company);
-    if (!ships) { ships = new Map(); companies.set(company, ships); }
-    ships.set(ship, [...(ships.get(ship) ?? []), ...items]);
-  }
+  const days = new Set<string>();
+  const blocks: string[] = [];
   let count = 0;
-  const compare = ([a]: [string, unknown], [b]: [string, unknown]): number => a.localeCompare(b, 'ru', { numeric: true });
-  const blocks = [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([date, companies]) => {
-    const lines = [date];
-    for (const [company, ships] of [...companies.entries()].sort(compare)) {
-      lines.push(`[${company}]`);
-      for (const [ship, items] of [...ships.entries()].sort(compare)) {
-        count += items.length;
-        lines.push(`  ${ship}:`, ...items.map((item, i) => `    ${i + 1}) ${item}`));
-      }
+  // Stable sorting retains input (file-path) order for pages on the same day.
+  for (const note of [...notes].sort((a, b) => a.date.localeCompare(b.date))) {
+    validateDate(note.date);
+    const lines = extractSourceLines(note.markdown, options);
+    if (!lines.length) continue;
+    days.add(note.date);
+    count += lines.length;
+    const properties = note.properties ?? [];
+    const sections = ['**' + note.date + '**'];
+    if (properties.length) {
+      sections.push([
+        '| Свойство | Значение |',
+        '| --- | --- |',
+        ...properties.map(property => '| **' + tableCell(property.name) + '** | ' + tableCell(property.value) + ' |'),
+      ].join('\n'));
     }
-    return lines.join('\n');
-  });
-  return { text: blocks.length ? `${blocks.join('\n\n')}\n` : '', days: blocks.length, items: count };
+    // Blank lines prevent ===== from becoming a Setext heading and keep the
+    // property table separate from the source body.
+    sections.push('=====', lines.join('\n'));
+    blocks.push(sections.join('\n\n'));
+  }
+  return { text: blocks.length ? blocks.join('\n\n') + '\n' : '', days: days.size, items: count };
 }

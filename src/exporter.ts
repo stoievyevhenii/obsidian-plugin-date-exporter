@@ -83,12 +83,12 @@ async function ensureFolder(vault: Vault, folder: string): Promise<void> {
 export async function saveReport(vault: Vault, settings: ExportSettings, report: PreparedReport): Promise<TFile> {
   const config = validateSettings(settings);
   validateRange(report.start, report.end);
-  if (!report.text) throw new Error('В выбранном периоде нет непустых пунктов. TXT не создан.');
+  if (!report.text) throw new Error('В выбранном периоде нет непустых пунктов. MD не создан.');
   await ensureFolder(vault, config.outputFolder);
   const prefix = config.outputFolder ? `${config.outputFolder}/` : '';
   const stem = `${prefix}Daily-report_${report.start}_${report.end}`;
   for (let suffix = 1; suffix <= 10000; suffix++) {
-    const path = normalizePath(`${stem}${suffix === 1 ? '' : ` (${suffix})`}.txt`);
+    const path = normalizePath(`${stem}${suffix === 1 ? '' : ` (${suffix})`}.md`);
     if (vault.getAbstractFileByPath(path)) continue;
     try { return await vault.create(path, report.text); }
     catch (error) {
