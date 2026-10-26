@@ -110,7 +110,7 @@ describe('mobile / desktop export dialog flow', () => {
     plugin.track(new ExportModal(app, plugin));
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-    expect(document.querySelector('textarea')?.value).toContain('&#60;img');
+    expect(document.querySelector('textarea')?.value).toContain('\\<img');
     expect(document.querySelector('img, script')).toBeNull();
   });
 });

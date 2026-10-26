@@ -41,7 +41,7 @@ The default output is `Reports/Daily-report_2026-10-01_2026-10-31.md`. Repeated 
 
 ## Properties and example
 
-All YAML properties at the beginning of a note are exported in `key - value` lines. Special characters in property text are escaped so they remain literal and do not become active Markdown or HTML. For example:
+All YAML properties at the beginning of a note are exported in `key - value` lines. Ordinary punctuation stays unchanged. Markdown syntax characters use standard backslash escapes so their rendered text stays literal; the exporter generates no HTML character codes. For example:
 
 ```markdown
 ---

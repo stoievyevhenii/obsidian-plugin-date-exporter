@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Replace numeric HTML character encoding with Markdown backslash escapes; retain ordinary punctuation such as dots and hyphens directly.
+
+- Preserve literal hyphens in property names and values instead of encoding them as &#45;.
+
 - Display properties as separate key - value lines instead of a table.
 
 - Format each date line as == **YYYY-MM-DD** == and remove the standalone equals-sign divider below properties.

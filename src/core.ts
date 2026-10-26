@@ -267,10 +267,17 @@ export function extractSourceLines(markdown: string, options: ExtractOptions): s
   return [...selected].sort((a, b) => a - b).map(line => lines[line]!);
 }
 
-/** Keep property names and values literal in Markdown paragraphs. */
-function propertyText(value: string): string {
-  return value.replace(/\s+/g, ' ').trim()
-    .replace(/[&<>|\\`*_[\]~#+.=-]/g, char => '&#' + char.charCodeAt(0) + ';');
+/** Markdown backslash escapes preserve literal symbols without HTML entities. */
+function propertyText(value: string, atLineStart = false): string {
+  let text = value.replace(/\s+/g, ' ').trim()
+    .replace(/[\\`*_{}[\]<>&|~]/g, '\\$&');
+  // Block syntax matters only at the start of the property name. Values such
+  // as "1. Нибулон-1" must retain their ordinary punctuation in the source.
+  if (atLineStart) {
+    text = text.replace(/^(\d+)([.)])(?=\s|$)/, '$1\\$2')
+      .replace(/^(#{1,6}|[-+])(?=\s|$)/, '\\$1');
+  }
+  return text;
 }
 
 export function buildReport(notes: DailyNote[], options: ExtractOptions): Report {
@@ -287,7 +294,7 @@ export function buildReport(notes: DailyNote[], options: ExtractOptions): Report
     const properties = note.properties ?? [];
     const sections = ['== **' + note.date + '** =='];
     if (properties.length) {
-      sections.push(properties.map(property => propertyText(property.name) + ' - ' + propertyText(property.value)).join('  \n'));
+      sections.push(properties.map(property => propertyText(property.name, true) + ' - ' + propertyText(property.value)).join('  \n'));
     }
     sections.push(lines.join('\n'));
     blocks.push(sections.join('\n\n'));
