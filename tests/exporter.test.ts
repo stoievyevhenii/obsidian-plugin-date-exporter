@@ -36,7 +36,7 @@ describe('vault export', () => {
     });
     const settings = { ...DEFAULT_SETTINGS, dailyFolder: 'Daily', includeSubfolders: false };
     const report = await prepareReport(vault, settings, '2026-10-01', '2026-10-23');
-    expect(report.text).toBe('**2026-10-01**\n\n=====\n\n- First\n\n**2026-10-23**\n\n=====\n\n- Last\n');
+    expect(report.text).toBe('== **2026-10-01** ==\n\n- First\n\n== **2026-10-23** ==\n\n- Last\n');
     expect(api.cachedRead).toHaveBeenCalledTimes(3);
     expect(api.create).not.toHaveBeenCalled();
     const file = await saveReport(vault, settings, report);
@@ -58,7 +58,7 @@ describe('vault export', () => {
     });
     const report = await prepareReport(vault, { ...DEFAULT_SETTINGS, dailyFolder: 'Daily' }, '2026-10-24', '2026-10-24');
     expect(report.matchedFiles).toBe(4);
-    expect(report.text).toBe('**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\n- First\n- Second\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 2 |\n\n=====\n\n- Third\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | Company B |\n| **Ship** | Ship 1 |\n\n=====\n\n- B\n');
+    expect(report.text).toBe('== **2026-10-24** ==\n\nCompany - ShipCompany  \nShip - Ship 1\n\n- First\n- Second\n\n== **2026-10-24** ==\n\nCompany - ShipCompany  \nShip - Ship 2\n\n- Third\n\n== **2026-10-24** ==\n\nCompany - Company B  \nShip - Ship 1\n\n- B\n');
   });
   it('reports invalid YAML with the source path and writes nothing', async () => {
     const { vault, api } = mockVault({ 'Daily/2026-10-24.md': '---\nCompany: [broken\n---\n- task' });

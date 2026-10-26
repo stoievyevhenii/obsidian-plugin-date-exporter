@@ -28,7 +28,7 @@ describe('mobile / desktop export dialog flow', () => {
     plugin.track(new ExportModal(app, plugin));
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
-    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('**2026-10-01**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\nПроверка вчера\n');
+    expect(document.querySelector<HTMLTextAreaElement>('textarea')?.value).toBe('== **2026-10-01** ==\n\nCompany - ShipCompany  \nShip - Ship 1\n\nПроверка вчера\n');
   });
   it('registers the command and opens the dialog with the requested default range', async () => {
     await plugin.onload();
@@ -77,7 +77,7 @@ describe('mobile / desktop export dialog flow', () => {
     document.querySelector('form')!.dispatchEvent(new Event('submit', { cancelable: true }));
     await vi.waitFor(() => expect(create).toHaveBeenCalledTimes(1));
     const area = document.querySelector<HTMLTextAreaElement>('textarea')!;
-    expect(area.value).toBe('**2026-10-01**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\n- [ ] Проверить экспорт\n');
+    expect(area.value).toBe('== **2026-10-01** ==\n\nCompany - ShipCompany  \nShip - Ship 1\n\n- [ ] Проверить экспорт\n');
     expect(document.body.textContent).toContain('Копировать');
     expect(document.body.textContent).toContain('Поделиться');
     expect(document.body.textContent).toContain('Выделить всё');

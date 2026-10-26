@@ -2,10 +2,14 @@
 
 ## Unreleased
 
-- Save Markdown (.md) reports with bold dates and a two-column property table with bold names.
+- Display properties as separate key - value lines instead of a table.
+
+- Format each date line as == **YYYY-MM-DD** == and remove the standalone equals-sign divider below properties.
+
+- Save Markdown (.md) reports with bold dates and key-value property lines.
 - Default to the full previous month on days 1–7 and the full current month from day 8, using the local date at each dialog opening. Keep manual date overrides.
 - Keep each source note in a separate block, retaining its source list numbers, checkbox markers, inline Markdown and indentation. Company/Ship grouping and generated numbering are removed.
-- Escape property text to keep table columns and labels intact.
+- Escape property text to preserve its literal Markdown representation.
 - Share Markdown with its matching extension and media type.
 - Retain date sorting, empty-page skipping, checkbox filters, vault-root support and unique report filenames.
 

@@ -26,10 +26,10 @@ describe('source lines in MD reports', () => {
   it('does not leak excluded nested code or duplicate continuation lines', () => {
     expect(extractSourceLines('- parent\n\n  ~~~\n  - code\n  ~~~\n\n- next', all)).toEqual(['- parent', '- next']);
   });
-  it('separates properties and lines with exactly five equals signs', () => {
+  it('separates key-value properties and body with a blank line', () => {
     const note = parseDailyNote('2026-10-24', '---\nCompany: Owner\nShip: Ship 1\ntags: [work, urgent]\n---\nA plain line\n\n- [ ] A task');
     expect(buildReport([note], all)).toEqual({ days: 1, items: 2, text:
-      '**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | Owner |\n| **Ship** | Ship 1 |\n| **tags** | work, urgent |\n\n=====\n\nA plain line\n- [ ] A task\n' });
+      '== **2026-10-24** ==\n\nCompany - Owner  \nShip - Ship 1  \ntags - work, urgent\n\nA plain line\n- [ ] A task\n' });
   });
   it('keeps children of empty parent items and quoted lists on their source lines', () => {
     expect(extractSourceLines('-\n  - Child\n\n>\n> - Quoted', all)).toEqual(['  - Child', '> - Quoted']);
@@ -42,7 +42,7 @@ describe('source lines in MD reports', () => {
     expect(extractSourceLines('- Keep `%% literal` and **bold %% hidden %% end**', all))
       .toEqual(['- Keep `%% literal` and **bold  end**']);
   });
-  it('includes a separator but does not invent properties when frontmatter is absent', () => {
-    expect(buildReport([{ date: '2026-10-24', markdown: 'Body' }], all).text).toBe('**2026-10-24**\n\n=====\n\nBody\n');
+  it('writes the date and body without inventing properties or a divider', () => {
+    expect(buildReport([{ date: '2026-10-24', markdown: 'Body' }], all).text).toBe('== **2026-10-24** ==\n\nBody\n');
   });
 });

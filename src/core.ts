@@ -267,10 +267,10 @@ export function extractSourceLines(markdown: string, options: ExtractOptions): s
   return [...selected].sort((a, b) => a - b).map(line => lines[line]!);
 }
 
-/** Keep property text literal inside a Markdown cell and its bold label. */
-function tableCell(value: string): string {
+/** Keep property names and values literal in Markdown paragraphs. */
+function propertyText(value: string): string {
   return value.replace(/\s+/g, ' ').trim()
-    .replace(/[&<>|\\`*_[\]~]/g, char => '&#' + char.charCodeAt(0) + ';');
+    .replace(/[&<>|\\`*_[\]~#+.=-]/g, char => '&#' + char.charCodeAt(0) + ';');
 }
 
 export function buildReport(notes: DailyNote[], options: ExtractOptions): Report {
@@ -285,17 +285,11 @@ export function buildReport(notes: DailyNote[], options: ExtractOptions): Report
     days.add(note.date);
     count += lines.length;
     const properties = note.properties ?? [];
-    const sections = ['**' + note.date + '**'];
+    const sections = ['== **' + note.date + '** =='];
     if (properties.length) {
-      sections.push([
-        '| Свойство | Значение |',
-        '| --- | --- |',
-        ...properties.map(property => '| **' + tableCell(property.name) + '** | ' + tableCell(property.value) + ' |'),
-      ].join('\n'));
+      sections.push(properties.map(property => propertyText(property.name) + ' - ' + propertyText(property.value)).join('  \n'));
     }
-    // Blank lines prevent ===== from becoming a Setext heading and keep the
-    // property table separate from the source body.
-    sections.push('=====', lines.join('\n'));
+    sections.push(lines.join('\n'));
     blocks.push(sections.join('\n\n'));
   }
   return { text: blocks.length ? blocks.join('\n\n') + '\n' : '', days: days.size, items: count };

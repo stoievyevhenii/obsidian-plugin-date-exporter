@@ -86,7 +86,7 @@ describe('Markdown conversion', () => {
       { date: '2026-12-30', markdown: '# Empty\n- [ ]' },
       { date: '2026-12-31', markdown: '- Third' },
     ], all);
-    expect(report).toEqual({ text: '**2026-12-31**\n\n=====\n\n- First\n- Second\n\n**2026-12-31**\n\n=====\n\n- Third\n\n**2027-01-01**\n\n=====\n\n- Last\n', days: 2, items: 4 });
+    expect(report).toEqual({ text: '== **2026-12-31** ==\n\n- First\n- Second\n\n== **2026-12-31** ==\n\n- Third\n\n== **2027-01-01** ==\n\n- Last\n', days: 2, items: 4 });
   });
   it('returns no file content when there are no items', () => {
     expect(buildReport([{ date: '2026-10-01', markdown: '# Empty' }], all)).toEqual({ text: '', days: 0, items: 0 });
@@ -108,7 +108,7 @@ describe('separate page properties', () => {
   it('keeps properties attached to their own page without regrouping or merging', () => {
     const notes = ['B', 'A', 'A'].map(company => parseDailyNote('2026-10-24', `---\nCompany: ${company}\nShip: Ship 1\n---\n- ${company}`));
     expect(buildReport(notes, all)).toEqual({ days: 1, items: 3, text:
-      '**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | B |\n| **Ship** | Ship 1 |\n\n=====\n\n- B\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | A |\n| **Ship** | Ship 1 |\n\n=====\n\n- A\n\n**2026-10-24**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | A |\n| **Ship** | Ship 1 |\n\n=====\n\n- A\n' });
+      '== **2026-10-24** ==\n\nCompany - B  \nShip - Ship 1\n\n- B\n\n== **2026-10-24** ==\n\nCompany - A  \nShip - Ship 1\n\n- A\n\n== **2026-10-24** ==\n\nCompany - A  \nShip - Ship 1\n\n- A\n' });
   });
   it('omits property-only pages and pages with no included lines', () => {
     const notes = [
@@ -117,7 +117,7 @@ describe('separate page properties', () => {
       parseDailyNote('2026-10-25', '---\nCompany: Active\n---\n- [ ] pending'),
     ];
     expect(buildReport(notes, { listMode: 'checkboxes', includeCompleted: false })).toEqual({
-      days: 1, items: 1, text: '**2026-10-25**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | Active |\n\n=====\n\n- [ ] pending\n',
+      days: 1, items: 1, text: '== **2026-10-25** ==\n\nCompany - Active\n\n- [ ] pending\n',
     });
   });
 });

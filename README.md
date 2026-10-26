@@ -10,7 +10,7 @@ Export daily Markdown lists for an inclusive date range to a single Markdown rep
 - Configure the daily-note folder and filename format (`YYYY-MM-DD` by default).
 - Find same-date notes in different ship subfolders; recursive search is enabled by default.
 - Export plain body text, ordinary Markdown list items and checkboxes, or checkboxes only; optionally exclude completed tasks. Each nonempty standalone body line becomes an item.
-- Render the date in bold and all YAML properties as a two-column table with bold field names, followed by `=====` and the selected source lines. No automatic numbering or Company/Ship grouping.
+- Render the date in bold and all YAML properties as `key - value` lines, followed by a blank line and the selected source lines. No automatic numbering or Company/Ship grouping.
 - Skip empty items, pages and dates. Keep source notes unchanged and give repeated exports a new filename.
 - Preview and automatically save one UTF-8 Markdown inside the vault; explicitly copy or share it afterward.
 
@@ -41,7 +41,7 @@ The default output is `Reports/Daily-report_2026-10-01_2026-10-31.md`. Repeated 
 
 ## Properties and example
 
-All YAML properties at the beginning of a note are exported in a two-column table (property/value), using bold field names. Special characters in property text are escaped so they remain literal and do not create extra columns or active HTML. For example:
+All YAML properties at the beginning of a note are exported in `key - value` lines. Special characters in property text are escaped so they remain literal and do not become active Markdown or HTML. For example:
 
 ```markdown
 ---
@@ -56,21 +56,17 @@ tags: [work, urgent]
 Output:
 
 ```markdown
-**2026-10-24**
+== **2026-10-24** ==
 
-| Свойство | Значение |
-| --- | --- |
-| **Company** | ShipCompany |
-| **Ship** | Ship 1 |
-| **tags** | work, urgent |
-
-=====
+Company - ShipCompany  
+Ship - Ship 1  
+tags - work, urgent
 
 - [x] Prepare report
 - [ ] Call the team
 ```
 
-Each file produces a separate Markdown block: bold date, a two-column property table with bold names, exactly five equals signs, then the selected source lines. Blank lines separate the sections so the table and divider render correctly. Dates sort ascending; same-date files retain file-path order, with no merging by Company or Ship. A blank line separates file blocks. If properties are absent, only the date and separator precede the lines. Pages without included text/list lines are skipped even if they have properties.
+Each file produces a separate Markdown block: a date line formatted as `== **YYYY-MM-DD** ==`, `key - value` property lines, then the selected source lines. Property lines use Markdown hard breaks; blank lines separate the sections; no divider is added. Dates sort ascending; same-date files retain file-path order, with no merging by Company or Ship. A blank line separates file blocks. If properties are absent, only the formatted date precedes the lines. Pages without included text/list lines are skipped even if they have properties.
 
 List-valued properties are comma-separated; numbers and booleans are text, null is empty, multiline property text becomes one line, and nested objects use compact JSON. Wikilinks remain as written. Invalid YAML or a non-mapping frontmatter stops the export and identifies the source file.
 
@@ -80,7 +76,7 @@ The `examples/` folder contains sample notes and exact expected Markdown files. 
 
 Supported filename tokens are the literal numeric tokens `YYYY`, `MM`, `DD`; all three are required. Examples: `YYYY-MM-DD`, `DD.MM.YYYY.md`, `YYYY/MM/YYYY-MM-DD`, `[Journal-]YYYY-MM-DD`. The `.md` extension is optional in settings. This is a deliberately limited token set, not the full Moment format language. With recursive search enabled, the format matches the end of the relative path inside the configured daily-note folder.
 
-Bullet/ordered lists, standard and custom single-character checkbox statuses, nested items and multiline items are supported. Source markers, checkbox states, existing list numbers, inline Markdown, indentation and continuation lines are retained. No numbering is generated. Blank lines/items, headings, code blocks and comments are excluded; YAML is exported as properties above the separator, and lists in blockquotes/callouts are included. Dataview/Tasks query results and embedded notes are not evaluated.
+Bullet/ordered lists, standard and custom single-character checkbox statuses, nested items and multiline items are supported. Source markers, checkbox states, existing list numbers, inline Markdown, indentation and continuation lines are retained. No numbering is generated. Blank lines/items, headings, code blocks and comments are excluded; YAML is exported as property lines above the body, and lists in blockquotes/callouts are included. Dataview/Tasks query results and embedded notes are not evaluated.
 
 Dates are validated as real civil dates. Absolute paths, traversal segments, hidden folders and invalid cross-platform path characters are rejected. All selected notes must be read and parsed successfully before a report can be saved; empty exports create no Markdown.
 

@@ -28,6 +28,6 @@ describe('plain text alongside Markdown lists', () => {
   });
   it('exports properties followed by markerless text without generated numbering', () => {
     const note = parseDailyNote('2026-10-23', '---\nCompany: ShipCompany\nShip: Ship 1\n---\nПроверка вчера');
-    expect(buildReport([note], all)).toEqual({ days: 1, items: 1, text: '**2026-10-23**\n\n| Свойство | Значение |\n| --- | --- |\n| **Company** | ShipCompany |\n| **Ship** | Ship 1 |\n\n=====\n\nПроверка вчера\n' });
+    expect(buildReport([note], all)).toEqual({ days: 1, items: 1, text: '== **2026-10-23** ==\n\nCompany - ShipCompany  \nShip - Ship 1\n\nПроверка вчера\n' });
   });
 });

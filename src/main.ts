@@ -90,7 +90,7 @@ export class ExportModal extends Modal {
     this.modalEl.addClass('dn-txt-modal');
     this.setTitle('Экспорт Daily Notes');
     const draft = { ...this.plugin.exportSettings };
-    this.contentEl.createEl('p', { text: 'Один Markdown-файл: жирная дата, таблица properties и строки заметки. С 1 по 7 число выбран предыдущий месяц, с 8-го — текущий. Даты можно изменить.', cls: 'dn-txt-hint' });
+    this.contentEl.createEl('p', { text: 'Один Markdown-файл: жирная дата, properties в формате «ключ - значение» и строки заметки. С 1 по 7 число выбран предыдущий месяц, с 8-го — текущий. Даты можно изменить.', cls: 'dn-txt-hint' });
     const form = this.contentEl.createEl('form', { cls: 'dn-txt-form' });
     const dates = form.createDiv({ cls: 'dn-txt-dates' });
     const dateField = (label: string, value: string): HTMLInputElement => {
